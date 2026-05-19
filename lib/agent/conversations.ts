@@ -1,11 +1,17 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 
-// Service role client — server-side only, never exposed to browser
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
+// Lazy init — avoids build-time crash when env vars are not yet set in CI
+let _supabase: SupabaseClient | null = null
+function db() {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+  }
+  return _supabase
+}
 
 // ── Get or create conversation ────────────────────────────────────────────────
 
@@ -13,7 +19,7 @@ export async function getOrCreateConversation(
   phoneNumber: string,
   displayName?: string,
 ): Promise<string> {
-  const { data, error } = await supabase
+  const { data, error } = await db()
     .from('wa_conversations')
     .upsert(
       { phone_number: phoneNumber, display_name: displayName },
@@ -32,7 +38,7 @@ export async function getConversationMessages(
   conversationId: string,
   limit = 30,
 ): Promise<ChatCompletionMessageParam[]> {
-  const { data, error } = await supabase
+  const { data, error } = await db()
     .from('wa_messages')
     .select('role, content, tool_calls, tool_call_id, tool_name')
     .eq('conversation_id', conversationId)
@@ -77,7 +83,7 @@ export async function appendMessage(
   conversationId: string,
   msg: MessageRow,
 ): Promise<void> {
-  const { error } = await supabase.from('wa_messages').insert({
+  const { error } = await db().from('wa_messages').insert({
     conversation_id: conversationId,
     role:            msg.role,
     content:         msg.content,
@@ -101,7 +107,7 @@ export async function saveBooking(
     totalUsd: number
   },
 ) {
-  await supabase.from('wa_bookings').insert({
+  await db().from('wa_bookings').insert({
     conversation_id:     conversationId,
     type:                booking.type,
     provider:            booking.provider,
