@@ -9,15 +9,21 @@ import { searchHotels, formatHotelOffersForWhatsApp } from '@/lib/travel/booking
 import { searchExperiences, formatExperiencesForWhatsApp } from '@/lib/travel/viator'
 import { getConversationMessages, appendMessage } from '@/lib/agent/conversations'
 
-// OpenAI-compatible client pointed at OpenRouter
-const ai = new OpenAI({
-  apiKey:  process.env.OPENROUTER_API_KEY ?? '',
-  baseURL: 'https://openrouter.ai/api/v1',
-  defaultHeaders: {
-    'HTTP-Referer': 'https://app.thewanderlust.app',
-    'X-Title':      'WanderAI Travel Agent',
-  },
-})
+// Lazy init — avoids build-time crash when OPENROUTER_API_KEY is not set
+let _ai: OpenAI | null = null
+function getAI() {
+  if (!_ai) {
+    _ai = new OpenAI({
+      apiKey:  process.env.OPENROUTER_API_KEY ?? 'placeholder',
+      baseURL: 'https://openrouter.ai/api/v1',
+      defaultHeaders: {
+        'HTTP-Referer': 'https://app.thewanderlust.app',
+        'X-Title':      'WanderAI Travel Agent',
+      },
+    })
+  }
+  return _ai
+}
 
 const MODEL = 'anthropic/claude-sonnet-4-5'
 
@@ -35,7 +41,7 @@ export async function runAgent(
     const history = await getConversationMessages(conversationId, 30)
 
     // 3. Call Claude with tools
-    const response = await ai.chat.completions.create({
+    const response = await getAI().chat.completions.create({
       model: MODEL,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -84,7 +90,7 @@ export async function runAgent(
 
       // 5. Get Claude's final response after tool results
       const finalHistory = await getConversationMessages(conversationId, 30)
-      const finalResponse = await ai.chat.completions.create({
+      const finalResponse = await getAI().chat.completions.create({
         model: MODEL,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
