@@ -13,36 +13,47 @@ export interface SlidePhoto {
 interface PhotoSlideshowProps {
   photos: SlidePhoto[]
   intervalMs?: number
-  overlayOpacity?: number        // 0–1, applied as dark overlay
+  overlayOpacity?: number
   className?: string
   showLocation?: boolean
-  children?: React.ReactNode     // content layered above
+  children?: React.ReactNode
 }
 
-const TRANSITION_MS = 1100
+const TRANSITION_MS = 1400
 
 export function PhotoSlideshow({
   photos,
-  intervalMs = 6500,
+  intervalMs = 6000,
   overlayOpacity = 0.50,
   className,
   showLocation = true,
   children,
 }: PhotoSlideshowProps) {
-  const [current, setCurrent]     = useState(0)
-  const [next, setNext]           = useState(1 % photos.length)
-  const [isTransitioning, setTransitioning] = useState(false)
+  // base = always fully visible underneath (opacity 1, z-index 1)
+  // top  = fades in on top (z-index 2), then becomes the new base
+  const [baseIdx, setBaseIdx] = useState(0)
+  const [topIdx,  setTopIdx]  = useState(1 % photos.length)
+  const [topOpacity, setTopOpacity] = useState(0)  // 0 = invisible, 1 = fully in
+  const isFading = useRef(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const advance = useCallback(() => {
-    setTransitioning(true)
+    if (isFading.current) return
+    isFading.current = true
+
+    // Fade the top layer in
+    setTopOpacity(1)
+
     setTimeout(() => {
-      setCurrent(prev => {
-        const n = (prev + 1) % photos.length
-        setNext((n + 1) % photos.length)
-        return n
+      // Top is now fully visible — promote it to base, queue next top
+      setBaseIdx(prev => {
+        const next = (prev + 1) % photos.length
+        // Queue the slot after that as the new top (hidden)
+        setTopIdx((next + 1) % photos.length)
+        setTopOpacity(0)           // reset top to invisible (no transition — instant)
+        return next
       })
-      setTransitioning(false)
+      isFading.current = false
     }, TRANSITION_MS)
   }, [photos.length])
 
@@ -51,36 +62,39 @@ export function PhotoSlideshow({
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [advance, intervalMs])
 
-  const slideStyle = (entering: boolean): React.CSSProperties => ({
-    position:   'absolute',
-    inset:      0,
-    opacity:    entering
-      ? (isTransitioning ? 1 : 0)
-      : (isTransitioning ? 0 : 1),
-    transform:  entering
-      ? (isTransitioning ? 'translateX(0) scale(1)'    : 'translateX(3%) scale(1.02)')
-      : (isTransitioning ? 'translateX(-3%) scale(1)'  : 'translateX(0) scale(1)'),
-    transition: `opacity ${TRANSITION_MS}ms cubic-bezier(0.4,0,0.2,1), transform ${TRANSITION_MS}ms cubic-bezier(0.4,0,0.2,1)`,
-    willChange: 'opacity, transform',
-  })
-
   return (
-    <div className={cn('relative overflow-hidden', className)}>
+    <div className={cn('relative overflow-hidden bg-black', className)}>
 
-      {/* ── Photo layers ── */}
-      <div style={slideStyle(false)}>
+      {/* ── Base layer — always opacity 1, never fades out ── */}
+      <div className="absolute inset-0" style={{ zIndex: 1 }}>
         <img
-          src={photos[current].url}
-          alt={photos[current].location}
+          src={photos[baseIdx].url}
+          alt={photos[baseIdx].location}
           className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            transform: 'scale(1.04)',
+            transition: `transform ${intervalMs + TRANSITION_MS}ms linear`,
+          }}
           loading="eager"
         />
       </div>
-      <div style={slideStyle(true)}>
+
+      {/* ── Top layer — fades in over the base, never fades out ── */}
+      <div
+        className="absolute inset-0"
+        style={{
+          zIndex:     2,
+          opacity:    topOpacity,
+          transition: topOpacity === 1
+            ? `opacity ${TRANSITION_MS}ms cubic-bezier(0.4,0,0.2,1)`
+            : 'none',   // instant reset — no flash
+        }}
+      >
         <img
-          src={photos[next].url}
-          alt={photos[next].location}
+          src={photos[topIdx].url}
+          alt={photos[topIdx].location}
           className="absolute inset-0 w-full h-full object-cover"
+          style={{ transform: 'scale(1.04)' }}
           loading="eager"
         />
       </div>
@@ -89,48 +103,50 @@ export function PhotoSlideshow({
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
+          zIndex: 3,
           background: `linear-gradient(
             to bottom,
-            rgba(7,24,32,${overlayOpacity * 0.7}) 0%,
-            rgba(7,24,32,${overlayOpacity * 0.45}) 35%,
-            rgba(7,24,32,${overlayOpacity * 0.55}) 65%,
-            rgba(7,24,32,${overlayOpacity * 0.85}) 100%
+            rgba(7,24,32,${(overlayOpacity * 0.65).toFixed(2)}) 0%,
+            rgba(7,24,32,${(overlayOpacity * 0.38).toFixed(2)}) 35%,
+            rgba(7,24,32,${(overlayOpacity * 0.50).toFixed(2)}) 65%,
+            rgba(7,24,32,${(overlayOpacity * 0.88).toFixed(2)}) 100%
           )`,
         }}
       />
 
       {/* ── Location badge ── */}
       {showLocation && (
-        <div className="absolute bottom-6 left-6 z-10 flex items-center gap-1.5 transition-all duration-700">
-          <div className="flex items-center gap-1.5 bg-ocean-950/50 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5">
-            <MapPin className="w-3 h-3 text-gold-400" />
+        <div className="absolute bottom-6 left-6 pointer-events-none" style={{ zIndex: 4 }}>
+          <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5">
+            <MapPin className="w-3 h-3 text-gold-400 flex-shrink-0" />
             <span className="text-[11px] text-cream/80 font-medium tracking-wide">
-              {isTransitioning ? photos[next].location : photos[current].location}
+              {topOpacity > 0 ? photos[topIdx].location : photos[baseIdx].location}
             </span>
           </div>
         </div>
       )}
 
-      {/* ── Slide dots ── */}
-      <div className="absolute bottom-6 right-6 z-10 flex items-center gap-1.5">
-        {photos.map((_, i) => (
-          <div
-            key={i}
-            className="rounded-full transition-all duration-500"
-            style={{
-              width:  i === (isTransitioning ? next : current) ? 20 : 5,
-              height: 5,
-              background: i === (isTransitioning ? next : current)
-                ? '#C49540'
-                : 'rgba(255,255,255,0.3)',
-            }}
-          />
-        ))}
+      {/* ── Progress dots ── */}
+      <div className="absolute bottom-6 right-6 flex items-center gap-1.5" style={{ zIndex: 4 }}>
+        {photos.map((_, i) => {
+          const active = topOpacity > 0 ? i === topIdx : i === baseIdx
+          return (
+            <div
+              key={i}
+              className="rounded-full transition-all duration-500"
+              style={{
+                width:      active ? 20 : 5,
+                height:     5,
+                background: active ? '#C49540' : 'rgba(255,255,255,0.28)',
+              }}
+            />
+          )
+        })}
       </div>
 
       {/* ── Content slot ── */}
       {children && (
-        <div className="relative z-10 h-full">{children}</div>
+        <div className="relative h-full" style={{ zIndex: 5 }}>{children}</div>
       )}
     </div>
   )
