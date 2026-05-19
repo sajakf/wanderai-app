@@ -3,9 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
-import { PhotoSlideshow } from '@/components/ui/PhotoSlideshow'
+import { VideoSlideshow } from '@/components/ui/VideoSlideshow'
 import { Button } from '@/components/ui/Button'
-import { AUTH_PHOTOS } from '@/lib/photos'
+import { NATURE_VIDEOS } from '@/lib/photos'
 import { cn } from '@/lib/utils'
 
 const COUNTRY_CODES = [
@@ -54,12 +54,11 @@ export default function OnboardingPage() {
   return (
     <div className="relative min-h-dvh w-full overflow-hidden">
 
-      {/* ── Full-screen photo slideshow ── */}
-      <PhotoSlideshow
-        photos={AUTH_PHOTOS}
-        intervalMs={7000}
+      {/* ── Full-screen slow-mo nature video loop ── */}
+      <VideoSlideshow
+        videos={NATURE_VIDEOS}
         overlayOpacity={0.52}
-        showLocation
+        showScene
         className="absolute inset-0"
       />
 

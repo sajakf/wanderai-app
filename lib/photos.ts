@@ -1,4 +1,5 @@
 import type { SlidePhoto } from '@/components/ui/PhotoSlideshow'
+import type { SlideVideo } from '@/components/ui/VideoSlideshow'
 
 const BASE = 'https://images.unsplash.com'
 const PARAMS = '?auto=format&fit=crop&w=1920&q=85'
@@ -65,6 +66,26 @@ export const AUTH_PHOTOS: SlidePhoto[] = [
     location: 'Taj Mahal, India',
     mood: 'warm',
   },
+]
+
+/**
+ * Curated slow-motion nature videos (Mixkit CDN, free licence)
+ * Ordered for maximum visual variety — flora → water → macro → forest
+ * Used on auth screens (onboarding + verify) for the Apple-style wallpaper feel
+ */
+export const NATURE_VIDEOS: SlideVideo[] = [
+  { id: 7279,  scene: 'White flower, slow motion',        mood: 'flora'  },
+  { id: 6806,  scene: 'Water drops on still surface',     mood: 'water'  },
+  { id: 48313, scene: 'Bee landing on blossom',           mood: 'macro'  },
+  { id: 27034, scene: 'Mountain stream, slow motion',     mood: 'water'  },
+  { id: 7366,  scene: 'Petunia opening, slow motion',     mood: 'flora'  },
+  { id: 18312, scene: 'Rain on a forest lake',            mood: 'water'  },
+  { id: 48318, scene: 'Bee in flight, slow motion',       mood: 'macro'  },
+  { id: 6849,  scene: 'Gardenia blooming, time-lapse',    mood: 'flora'  },
+  { id: 1164,  scene: 'Ocean waves, slow motion',         mood: 'water'  },
+  { id: 95,    scene: 'Branches in the breeze',           mood: 'forest' },
+  { id: 1187,  scene: 'White blossoms swaying',           mood: 'flora'  },
+  { id: 27009, scene: 'Forest stream, slow motion',       mood: 'water'  },
 ]
 
 /** Subset for explore screen destination cards */

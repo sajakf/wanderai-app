@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, RefreshCw } from 'lucide-react'
-import { PhotoSlideshow } from '@/components/ui/PhotoSlideshow'
+import { VideoSlideshow } from '@/components/ui/VideoSlideshow'
 import { OTPInput } from '@/components/ui/OTPInput'
-import { AUTH_PHOTOS } from '@/lib/photos'
+import { NATURE_VIDEOS } from '@/lib/photos'
 
-// Start from a different photo so it feels like a continuation
-const VERIFY_PHOTOS = [...AUTH_PHOTOS.slice(4), ...AUTH_PHOTOS.slice(0, 4)]
+// Start mid-sequence so verify screen feels like a visual continuation
+const VERIFY_VIDEOS = [...NATURE_VIDEOS.slice(4), ...NATURE_VIDEOS.slice(0, 4)]
 
 export default function VerifyPage() {
   const router  = useRouter()
@@ -47,12 +47,11 @@ export default function VerifyPage() {
   return (
     <div className="relative min-h-dvh w-full overflow-hidden">
 
-      {/* ── Full-screen photo slideshow ── */}
-      <PhotoSlideshow
-        photos={VERIFY_PHOTOS}
-        intervalMs={7000}
+      {/* ── Full-screen slow-mo nature video loop ── */}
+      <VideoSlideshow
+        videos={VERIFY_VIDEOS}
         overlayOpacity={0.52}
-        showLocation
+        showScene
         className="absolute inset-0"
       />
 
